@@ -1,0 +1,265 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrganizationRole {
+  ADMIN
+  MEMBER
+}
+
+enum CycleStatus {
+  PLANNED
+  ACTIVE
+  CLOSED
+}
+
+enum ObjectiveStatus {
+  NOT_STARTED
+  ON_TRACK
+  AT_RISK
+  OFF_TRACK
+  COMPLETED
+  ARCHIVED
+}
+
+enum ObjectiveLevel {
+  COMPANY
+  TEAM
+  INDIVIDUAL
+}
+
+enum KeyResultType {
+  NUMBER
+  PERCENTAGE
+  CURRENCY
+  BOOLEAN
+}
+
+enum CheckInConfidence {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELED
+}
+
+model User {
+  id        String           @id @default(cuid())
+  email     String           @unique
+  name      String?
+  imageUrl  String?
+  role      OrganizationRole @default(MEMBER)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  organizations      Organization[] @relation("OrganizationMembers")
+  ownedOrganizations Organization[] @relation("OrganizationOwner")
+  workspaces         Workspace[]    @relation("WorkspaceMembers")
+  ledWorkspaces      Workspace[]    @relation("WorkspaceLead")
+  ownedObjectives    Objective[]    @relation("ObjectiveOwner")
+  createdObjectives  Objective[]    @relation("ObjectiveCreator")
+  ownedKeyResults    KeyResult[]    @relation("KeyResultOwner")
+  checkIns           CheckIn[]      @relation("CheckInAuthor")
+  assignedTasks      Task[]         @relation("TaskAssignee")
+  createdTasks       Task[]         @relation("TaskCreator")
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  ownerId   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner      User?       @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  members    User[]      @relation("OrganizationMembers")
+  workspaces Workspace[]
+  cycles     Cycle[]
+  objectives Objective[]
+  keyResults KeyResult[]
+  checkIns   CheckIn[]
+  tasks      Task[]
+
+  @@index([ownerId])
+}
+
+model Workspace {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String
+  description    String?
+  organizationId String
+  leadId         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead         User?        @relation("WorkspaceLead", fields: [leadId], references: [id], onDelete: SetNull)
+  members      User[]       @relation("WorkspaceMembers")
+  cycles       Cycle[]
+  objectives   Objective[]
+  keyResults   KeyResult[]
+  checkIns     CheckIn[]
+  tasks        Task[]
+
+  @@unique([organizationId, slug])
+  @@index([leadId])
+}
+
+model Cycle {
+  id             String      @id @default(cuid())
+  name           String
+  slug           String
+  status         CycleStatus @default(PLANNED)
+  startsAt       DateTime
+  endsAt         DateTime
+  organizationId String
+  workspaceId    String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace    Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  objectives   Objective[]
+
+  @@unique([organizationId, slug])
+  @@index([workspaceId])
+  @@index([status])
+}
+
+model Objective {
+  id                String          @id @default(cuid())
+  title             String
+  description       String?
+  level             ObjectiveLevel  @default(TEAM)
+  status            ObjectiveStatus @default(NOT_STARTED)
+  progress          Float           @default(0)
+  dueDate           DateTime?
+  organizationId    String
+  workspaceId       String?
+  cycleId           String?
+  ownerId           String?
+  creatorId         String?
+  parentObjectiveId String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace       Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  cycle           Cycle?       @relation(fields: [cycleId], references: [id], onDelete: SetNull)
+  owner           User?        @relation("ObjectiveOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  creator         User?        @relation("ObjectiveCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  parentObjective Objective?   @relation("ObjectiveHierarchy", fields: [parentObjectiveId], references: [id], onDelete: SetNull)
+  childObjectives Objective[]  @relation("ObjectiveHierarchy")
+  keyResults      KeyResult[]
+  checkIns        CheckIn[]
+  tasks           Task[]
+
+  @@index([organizationId])
+  @@index([workspaceId])
+  @@index([cycleId])
+  @@index([ownerId])
+  @@index([parentObjectiveId])
+  @@index([status])
+}
+
+model KeyResult {
+  id             String             @id @default(cuid())
+  title          String
+  description    String?
+  type           KeyResultType      @default(NUMBER)
+  startValue     Float              @default(0)
+  targetValue    Float
+  currentValue   Float              @default(0)
+  unit           String?
+  confidence     CheckInConfidence?
+  organizationId String
+  workspaceId    String?
+  objectiveId    String
+  ownerId        String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace    Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  objective    Objective    @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  owner        User?        @relation("KeyResultOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  checkIns     CheckIn[]
+  tasks        Task[]
+
+  @@index([organizationId])
+  @@index([workspaceId])
+  @@index([objectiveId])
+  @@index([ownerId])
+}
+
+model CheckIn {
+  id             String            @id @default(cuid())
+  note           String?
+  confidence     CheckInConfidence
+  progress       Float?
+  value          Float?
+  organizationId String
+  workspaceId    String?
+  objectiveId    String?
+  keyResultId    String?
+  authorId       String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace    Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  objective    Objective?   @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  keyResult    KeyResult?   @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
+  author       User?        @relation("CheckInAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([workspaceId])
+  @@index([objectiveId])
+  @@index([keyResultId])
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+model Task {
+  id             String     @id @default(cuid())
+  title          String
+  description    String?
+  status         TaskStatus @default(TODO)
+  dueDate        DateTime?
+  completedAt    DateTime?
+  organizationId String
+  workspaceId    String?
+  objectiveId    String?
+  keyResultId    String?
+  assigneeId     String?
+  creatorId      String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace    Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  objective    Objective?   @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  keyResult    KeyResult?   @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
+  assignee     User?        @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  creator      User?        @relation("TaskCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([workspaceId])
+  @@index([objectiveId])
+  @@index([keyResultId])
+  @@index([assigneeId])
+  @@index([creatorId])
+  @@index([status])
+}

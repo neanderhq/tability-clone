@@ -436,7 +436,7 @@ export default function DashboardPage() {
               {stats.map((stat) => (
                 <div
                   key={stat.label}
-                  className="rounded-lg border border-border bg-white p-4 shadow-sm dark:bg-slate-950"
+                  className="rounded-lg border border-border bg-white p-4 shadow-sm"
                 >
                   <p className="text-sm text-muted-foreground">{stat.label}</p>
                   <p className="mt-3 text-2xl font-semibold">{stat.value}</p>
@@ -465,11 +465,11 @@ export default function DashboardPage() {
 
             <div className="space-y-4">
               {loading || objectivesLoading ? (
-                <div className="rounded-lg border border-border bg-white p-5 text-sm text-muted-foreground shadow-sm dark:bg-slate-950">
+                <div className="rounded-lg border border-border bg-white p-5 text-sm text-muted-foreground shadow-sm">
                   Loading objectives...
                 </div>
               ) : error ? (
-                <div className="rounded-lg border border-border bg-white p-5 text-sm text-muted-foreground shadow-sm dark:bg-slate-950">
+                <div className="rounded-lg border border-border bg-white p-5 text-sm text-muted-foreground shadow-sm">
                   {error}
                 </div>
               ) : objectives.length ? (
@@ -483,7 +483,7 @@ export default function DashboardPage() {
                   />
                 ))
               ) : (
-                <div className="rounded-lg border border-border bg-white p-5 text-sm text-muted-foreground shadow-sm dark:bg-slate-950">
+                <div className="rounded-lg border border-border bg-white p-5 text-sm text-muted-foreground shadow-sm">
                   No objectives found for this cycle.
                 </div>
               )}
@@ -491,7 +491,7 @@ export default function DashboardPage() {
           </section>
 
           <aside className="space-y-6">
-            <section className="rounded-lg border border-border bg-white p-5 shadow-sm dark:bg-slate-950">
+            <section className="rounded-lg border border-border bg-white p-5 shadow-sm">
               <h2 className="text-base font-semibold tracking-normal">
                 Quick actions
               </h2>
@@ -519,7 +519,7 @@ export default function DashboardPage() {
               </div>
             </section>
 
-            <section className="rounded-lg border border-border bg-white p-5 shadow-sm dark:bg-slate-950">
+            <section className="rounded-lg border border-border bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-semibold tracking-normal">
                   Cycle health

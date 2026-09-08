@@ -49,7 +49,7 @@ export function ObjectiveCard({
   onEdit,
 }: ObjectiveCardProps) {
   return (
-    <article className="rounded-lg border border-border bg-white p-5 shadow-sm dark:bg-slate-950">
+    <article className="rounded-lg border border-border bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -68,7 +68,7 @@ export function ObjectiveCard({
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
             {objective.description}
           </p>
-          <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+          <p className="mt-3 text-sm text-slate-600">
             {objective.team} · {objective.owner}
           </p>
         </div>
@@ -82,7 +82,7 @@ export function ObjectiveCard({
             Edit
           </button>
           <button
-            className="rounded-md border border-rose-200 px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50 dark:border-rose-900/60 dark:text-rose-300 dark:hover:bg-rose-950/40"
+            className="rounded-md border border-rose-200 px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50"
             type="button"
             onClick={() => onDelete(objective)}
           >

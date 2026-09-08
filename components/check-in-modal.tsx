@@ -94,7 +94,7 @@ export function CheckInModal({
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 px-4 py-6">
-      <div className="w-full max-w-xl rounded-lg border border-border bg-white p-6 shadow-xl dark:bg-slate-950">
+      <div className="w-full max-w-xl rounded-lg border border-border bg-white p-6 shadow-xl">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-primary">AI check-in</p>

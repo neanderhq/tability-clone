@@ -32,7 +32,7 @@ export default async function SignInPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-12">
-      <section className="w-full max-w-md rounded-lg border border-border bg-white p-8 shadow-sm dark:bg-slate-950">
+      <section className="w-full max-w-md rounded-lg border border-border bg-white p-8 shadow-sm">
         <div className="mb-8">
           <p className="text-sm font-medium text-primary">Tability Clone</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-normal">

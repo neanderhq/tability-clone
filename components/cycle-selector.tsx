@@ -21,7 +21,7 @@ export function CycleSelector({
     <label className="flex items-center gap-2 text-sm">
       <span className="sr-only">Cycle</span>
       <select
-        className="h-10 min-w-44 rounded-md border border-border bg-white px-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:bg-slate-950"
+        className="h-10 min-w-44 rounded-md border border-border bg-white px-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
         value={selectedCycleId}
         onChange={(event) => onChange(event.target.value)}
       >

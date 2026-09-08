@@ -9,13 +9,6 @@ export const metadata: Metadata = {
   description: "OKR management for teams that check in every week.",
 };
 
-const themeScript = `
-  try {
-    const theme = localStorage.getItem("theme") || "light";
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  } catch {}
-`;
-
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -24,9 +17,8 @@ export default async function RootLayout({
   const session = await auth();
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <SessionProvider session={session}>{children}</SessionProvider>
       </body>
     </html>

@@ -26,7 +26,7 @@ export function ProgressBar({
     <div className="space-y-2">
       {label ? (
         <div className="flex items-center justify-between text-sm">
-          <span className="font-medium text-slate-700 dark:text-slate-200">
+          <span className="font-medium text-slate-700">
             {label}
           </span>
           <span className="tabular-nums text-muted-foreground">

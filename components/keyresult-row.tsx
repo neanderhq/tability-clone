@@ -27,7 +27,7 @@ export function KeyResultRow({ keyResult }: KeyResultRowProps) {
   }${keyResult.unit ?? ""}`;
 
   return (
-    <div className="grid gap-3 rounded-md border border-border bg-slate-50 p-3 dark:bg-slate-900 md:grid-cols-[1fr_160px_88px] md:items-center">
+    <div className="grid gap-3 rounded-md border border-border bg-slate-50 p-3 md:grid-cols-[1fr_160px_88px] md:items-center">
       <div className="min-w-0">
         <p className="truncate text-sm font-medium">{keyResult.title}</p>
         <p className="mt-1 text-xs text-muted-foreground">

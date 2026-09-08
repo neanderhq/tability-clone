@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
@@ -41,7 +42,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = parsed.data.email.toLowerCase();
         const name = parsed.data.name?.trim() || email.split("@")[0];
 
-        const user = await prisma.$transaction(async (tx) => {
+        const user = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
           const user = await tx.user.upsert({
             where: {
               email,

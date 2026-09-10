@@ -33,6 +33,11 @@ enum ObjectiveLevel {
   INDIVIDUAL
 }
 
+enum ObjectiveVisibility {
+  PUBLIC
+  PRIVATE
+}
+
 enum KeyResultType {
   NUMBER
   PERCENTAGE
@@ -40,10 +45,21 @@ enum KeyResultType {
   BOOLEAN
 }
 
+enum MetricType {
+  NUMBER
+  PERCENTAGE
+  CURRENCY
+}
+
 enum CheckInConfidence {
   HIGH
   MEDIUM
   LOW
+}
+
+enum CheckInCadence {
+  NONE
+  WEEKLY
 }
 
 enum TaskStatus {
@@ -62,16 +78,18 @@ model User {
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 
-  organizations      Organization[] @relation("OrganizationMembers")
-  ownedOrganizations Organization[] @relation("OrganizationOwner")
-  workspaces         Workspace[]    @relation("WorkspaceMembers")
-  ledWorkspaces      Workspace[]    @relation("WorkspaceLead")
-  ownedObjectives    Objective[]    @relation("ObjectiveOwner")
-  createdObjectives  Objective[]    @relation("ObjectiveCreator")
-  ownedKeyResults    KeyResult[]    @relation("KeyResultOwner")
-  checkIns           CheckIn[]      @relation("CheckInAuthor")
-  assignedTasks      Task[]         @relation("TaskAssignee")
-  createdTasks       Task[]         @relation("TaskCreator")
+  organizations              Organization[]     @relation("OrganizationMembers")
+  ownedOrganizations         Organization[]     @relation("OrganizationOwner")
+  workspaces                 Workspace[]        @relation("WorkspaceMembers")
+  ledWorkspaces              Workspace[]        @relation("WorkspaceLead")
+  ownedObjectives            Objective[]        @relation("ObjectiveOwner")
+  createdObjectives          Objective[]        @relation("ObjectiveCreator")
+  ownedKeyResults            KeyResult[]        @relation("KeyResultOwner")
+  ownedMetrics               Metric[]           @relation("MetricOwner")
+  checkIns                   CheckIn[]          @relation("CheckInAuthor")
+  assignedTasks              Task[]             @relation("TaskAssignee")
+  createdTasks               Task[]             @relation("TaskCreator")
+  installedSlackIntegrations SlackIntegration[] @relation("SlackIntegrationInstaller")
 }
 
 model Organization {
@@ -82,14 +100,17 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  owner      User?       @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: SetNull)
-  members    User[]      @relation("OrganizationMembers")
-  workspaces Workspace[]
-  cycles     Cycle[]
-  objectives Objective[]
-  keyResults KeyResult[]
-  checkIns   CheckIn[]
-  tasks      Task[]
+  owner             User?              @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  members           User[]             @relation("OrganizationMembers")
+  workspaces        Workspace[]
+  cycles            Cycle[]
+  objectives        Objective[]
+  keyResults        KeyResult[]
+  metrics           Metric[]
+  checkIns          CheckIn[]
+  tasks             Task[]
+  slackIntegrations SlackIntegration[]
+  githubIntegrations GitHubIntegration[]
 
   @@index([ownerId])
 }
@@ -104,14 +125,17 @@ model Workspace {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  lead         User?        @relation("WorkspaceLead", fields: [leadId], references: [id], onDelete: SetNull)
-  members      User[]       @relation("WorkspaceMembers")
-  cycles       Cycle[]
-  objectives   Objective[]
-  keyResults   KeyResult[]
-  checkIns     CheckIn[]
-  tasks        Task[]
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead              User?              @relation("WorkspaceLead", fields: [leadId], references: [id], onDelete: SetNull)
+  members           User[]             @relation("WorkspaceMembers")
+  cycles            Cycle[]
+  objectives        Objective[]
+  keyResults        KeyResult[]
+  metrics           Metric[]
+  checkIns          CheckIn[]
+  tasks             Task[]
+  slackIntegrations SlackIntegration[]
+  githubIntegrations GitHubIntegration[]
 
   @@unique([organizationId, slug])
   @@index([leadId])
@@ -139,21 +163,24 @@ model Cycle {
 }
 
 model Objective {
-  id                String          @id @default(cuid())
-  title             String
-  description       String?
-  level             ObjectiveLevel  @default(TEAM)
-  status            ObjectiveStatus @default(NOT_STARTED)
-  progress          Float           @default(0)
-  dueDate           DateTime?
-  organizationId    String
-  workspaceId       String?
-  cycleId           String?
-  ownerId           String?
-  creatorId         String?
-  parentObjectiveId String?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  id                    String              @id @default(cuid())
+  title                 String
+  description           String?
+  level                 ObjectiveLevel      @default(TEAM)
+  status                ObjectiveStatus     @default(NOT_STARTED)
+  visibility            ObjectiveVisibility @default(PUBLIC)
+  progress              Float               @default(0)
+  dueDate               DateTime?
+  organizationId        String
+  workspaceId           String?
+  cycleId               String?
+  ownerId               String?
+  creatorId             String?
+  parentObjectiveId     String?
+  checkInCadence        CheckInCadence      @default(WEEKLY)
+  lastCheckInReminderAt DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
 
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   workspace       Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
@@ -172,24 +199,28 @@ model Objective {
   @@index([ownerId])
   @@index([parentObjectiveId])
   @@index([status])
+  @@index([visibility])
+  @@index([checkInCadence])
 }
 
 model KeyResult {
-  id             String             @id @default(cuid())
-  title          String
-  description    String?
-  type           KeyResultType      @default(NUMBER)
-  startValue     Float              @default(0)
-  targetValue    Float
-  currentValue   Float              @default(0)
-  unit           String?
-  confidence     CheckInConfidence?
-  organizationId String
-  workspaceId    String?
-  objectiveId    String
-  ownerId        String?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  id                    String             @id @default(cuid())
+  title                 String
+  description           String?
+  type                  KeyResultType      @default(NUMBER)
+  startValue            Float              @default(0)
+  targetValue           Float
+  currentValue          Float              @default(0)
+  unit                  String?
+  confidence            CheckInConfidence?
+  organizationId        String
+  workspaceId           String?
+  objectiveId           String
+  ownerId               String?
+  checkInCadence        CheckInCadence     @default(WEEKLY)
+  lastCheckInReminderAt DateTime?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   workspace    Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
@@ -197,11 +228,41 @@ model KeyResult {
   owner        User?        @relation("KeyResultOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   checkIns     CheckIn[]
   tasks        Task[]
+  githubIntegration GitHubIntegration?
 
   @@index([organizationId])
   @@index([workspaceId])
   @@index([objectiveId])
   @@index([ownerId])
+  @@index([checkInCadence])
+}
+
+model Metric {
+  id                    String         @id @default(cuid())
+  title                 String
+  description           String?
+  type                  MetricType     @default(NUMBER)
+  currentValue          Float          @default(0)
+  targetValue           Float?
+  unit                  String?
+  checkInCadence        CheckInCadence @default(WEEKLY)
+  lastCheckInReminderAt DateTime?
+  organizationId        String
+  workspaceId           String?
+  ownerId               String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace    Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  owner        User?        @relation("MetricOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  checkIns     CheckIn[]
+
+  @@index([organizationId])
+  @@index([workspaceId])
+  @@index([ownerId])
+  @@index([type])
+  @@index([checkInCadence])
 }
 
 model CheckIn {
@@ -214,6 +275,7 @@ model CheckIn {
   workspaceId    String?
   objectiveId    String?
   keyResultId    String?
+  metricId       String?
   authorId       String?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
@@ -222,12 +284,14 @@ model CheckIn {
   workspace    Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
   objective    Objective?   @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
   keyResult    KeyResult?   @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
+  metric       Metric?      @relation(fields: [metricId], references: [id], onDelete: Cascade)
   author       User?        @relation("CheckInAuthor", fields: [authorId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
   @@index([workspaceId])
   @@index([objectiveId])
   @@index([keyResultId])
+  @@index([metricId])
   @@index([authorId])
   @@index([createdAt])
 }
@@ -262,4 +326,52 @@ model Task {
   @@index([assigneeId])
   @@index([creatorId])
   @@index([status])
+}
+
+model SlackIntegration {
+  id                String   @id @default(cuid())
+  teamId            String   @unique
+  teamName          String?
+  channelId         String?
+  channelName       String?
+  botUserId         String?
+  botAccessToken    String
+  organizationId    String
+  workspaceId       String?
+  installedByUserId String?
+  installedAt       DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace       Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  installedByUser User?        @relation("SlackIntegrationInstaller", fields: [installedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([workspaceId])
+  @@index([channelId])
+  @@index([installedByUserId])
+}
+
+model GitHubIntegration {
+  id                       String   @id @default(cuid())
+  repository               String
+  branch                   String?
+  incrementBy              Float    @default(1)
+  keyResultId              String   @unique
+  organizationId           String
+  workspaceId              String?
+  lastDeliveryId           String?
+  lastMergedPullRequestUrl String?
+  lastMergedAt             DateTime?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  keyResult    KeyResult    @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace    Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([workspaceId])
+  @@index([repository])
+  @@index([branch])
 }

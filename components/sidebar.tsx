@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", symbol: "D" },
   { href: "/objectives", label: "Objectives", symbol: "O" },
+  { href: "/alignment", label: "Alignment", symbol: "A" },
   { href: "/cycles", label: "Cycles", symbol: "C" },
   { href: "/check-ins", label: "Check-ins", symbol: "I" },
   { href: "/reports", label: "Reports", symbol: "R" },
@@ -54,7 +55,7 @@ export function Sidebar() {
         </nav>
       </aside>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border bg-white lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t border-border bg-white lg:hidden">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
 

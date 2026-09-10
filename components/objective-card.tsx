@@ -1,11 +1,14 @@
 import {
   KeyResultRow,
   type KeyResultRowData,
+  type KeyResultUpdateData,
 } from "@/components/keyresult-row";
 import { ProgressBar } from "@/components/progress-bar";
 
 export type ObjectiveCardData = {
   id: string;
+  organizationId: string;
+  workspaceId?: string;
   title: string;
   description: string;
   owner: string;
@@ -21,6 +24,10 @@ type ObjectiveCardProps = {
   onCheckIn: (objective: ObjectiveCardData) => void;
   onDelete: (objective: ObjectiveCardData) => void;
   onEdit: (objective: ObjectiveCardData) => void;
+  onKeyResultEdit?: (
+    keyResult: KeyResultRowData,
+    updates: KeyResultUpdateData,
+  ) => Promise<void>;
 };
 
 const statusStyles: Record<ObjectiveCardData["status"], string> = {
@@ -47,6 +54,7 @@ export function ObjectiveCard({
   onCheckIn,
   onDelete,
   onEdit,
+  onKeyResultEdit,
 }: ObjectiveCardProps) {
   return (
     <article className="rounded-lg border border-border bg-white p-5 shadow-sm">
@@ -108,7 +116,11 @@ export function ObjectiveCard({
 
       <div className="mt-5 space-y-3">
         {objective.keyResults.map((keyResult) => (
-          <KeyResultRow key={keyResult.id} keyResult={keyResult} />
+          <KeyResultRow
+            key={keyResult.id}
+            keyResult={keyResult}
+            onEdit={onKeyResultEdit}
+          />
         ))}
       </div>
     </article>

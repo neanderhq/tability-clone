@@ -117,6 +117,8 @@ const progressTone: Record<
   ARCHIVED: "blue",
 };
 
+const MAX_TIMEOUT_DELAY = 2_147_483_647;
+
 function formatDate(dateValue?: string | null) {
   if (!dateValue) {
     return "No date";
@@ -223,6 +225,7 @@ export default function ObjectivesPage() {
   const [editForm, setEditForm] = useState<ObjectiveFormState>(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [showOverdueOnly, setShowOverdueOnly] = useState(false);
+  const [overdueRefresh, setOverdueRefresh] = useState(0);
 
   const loadObjectives = useCallback(async (organizationId: string) => {
     const params = new URLSearchParams({ organizationId });
@@ -306,15 +309,45 @@ export default function ObjectivesPage() {
     };
   }, [loadObjectives, session?.user, sessionStatus]);
 
-  const overdueObjectiveIds = useMemo(() => {
-    const now = Date.now();
+  const now = Date.now();
+  const overdueObjectiveIds = new Set(
+    objectives
+      .filter((objective) => isObjectiveOverdue(objective, now))
+      .map((objective) => objective.id),
+  );
+  const overdueCount = overdueObjectiveIds.size;
 
-    return new Set(
-      objectives
-        .filter((objective) => isObjectiveOverdue(objective, now))
-        .map((objective) => objective.id),
-    );
-  }, [objectives]);
+  useEffect(() => {
+    const now = Date.now();
+    let nextDueTime = Number.POSITIVE_INFINITY;
+
+    objectives.forEach((objective) => {
+      if (
+        !objective.dueDate ||
+        objective.status === "COMPLETED" ||
+        objective.status === "ARCHIVED"
+      ) {
+        return;
+      }
+
+      const dueTime = new Date(objective.dueDate).getTime();
+
+      if (!Number.isNaN(dueTime) && dueTime >= now) {
+        nextDueTime = Math.min(nextDueTime, dueTime);
+      }
+    });
+
+    if (!Number.isFinite(nextDueTime)) {
+      return;
+    }
+
+    const delay = Math.min(nextDueTime - now + 1, MAX_TIMEOUT_DELAY);
+    const timeoutId = window.setTimeout(() => {
+      setOverdueRefresh((currentRefresh) => currentRefresh + 1);
+    }, delay);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [objectives, overdueRefresh]);
 
   const filteredObjectives = showOverdueOnly
     ? objectives.filter((objective) => overdueObjectiveIds.has(objective.id))
@@ -360,12 +393,12 @@ export default function ObjectivesPage() {
       },
       {
         label: "Overdue",
-        value: String(overdueObjectiveIds.size),
+        value: String(overdueCount),
         note: "Past the due date",
         filter: "overdue" as const,
       },
     ];
-  }, [objectives, organization?.name, overdueObjectiveIds]);
+  }, [objectives, organization?.name, overdueCount]);
 
   function updateCreateForm(field: keyof ObjectiveFormState, value: string) {
     setCreateForm((currentForm) => ({ ...currentForm, [field]: value }));

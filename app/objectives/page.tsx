@@ -117,6 +117,8 @@ const progressTone: Record<
   ARCHIVED: "blue",
 };
 
+const MAX_TIMEOUT_DELAY = 2_147_483_647;
+
 function formatDate(dateValue?: string | null) {
   if (!dateValue) {
     return "No date";
@@ -195,6 +197,20 @@ function formFromObjective(objective: ApiObjective): ObjectiveFormState {
   };
 }
 
+function isObjectiveOverdue(objective: ApiObjective, now: number) {
+  if (
+    !objective.dueDate ||
+    objective.status === "COMPLETED" ||
+    objective.status === "ARCHIVED"
+  ) {
+    return false;
+  }
+
+  const dueDate = new Date(objective.dueDate);
+
+  return !Number.isNaN(dueDate.getTime()) && dueDate.getTime() < now;
+}
+
 export default function ObjectivesPage() {
   const { data: session, status: sessionStatus } = useSession();
   const [organization, setOrganization] = useState<OrganizationData | null>(
@@ -208,6 +224,8 @@ export default function ObjectivesPage() {
   const [createForm, setCreateForm] = useState<ObjectiveFormState>(emptyForm);
   const [editForm, setEditForm] = useState<ObjectiveFormState>(emptyForm);
   const [error, setError] = useState<string | null>(null);
+  const [showOverdueOnly, setShowOverdueOnly] = useState(false);
+  const [overdueRefresh, setOverdueRefresh] = useState(0);
 
   const loadObjectives = useCallback(async (organizationId: string) => {
     const params = new URLSearchParams({ organizationId });
@@ -291,6 +309,50 @@ export default function ObjectivesPage() {
     };
   }, [loadObjectives, session?.user, sessionStatus]);
 
+  const now = Date.now();
+  const overdueObjectiveIds = new Set(
+    objectives
+      .filter((objective) => isObjectiveOverdue(objective, now))
+      .map((objective) => objective.id),
+  );
+  const overdueCount = overdueObjectiveIds.size;
+
+  useEffect(() => {
+    const now = Date.now();
+    let nextDueTime = Number.POSITIVE_INFINITY;
+
+    objectives.forEach((objective) => {
+      if (
+        !objective.dueDate ||
+        objective.status === "COMPLETED" ||
+        objective.status === "ARCHIVED"
+      ) {
+        return;
+      }
+
+      const dueTime = new Date(objective.dueDate).getTime();
+
+      if (!Number.isNaN(dueTime) && dueTime >= now) {
+        nextDueTime = Math.min(nextDueTime, dueTime);
+      }
+    });
+
+    if (!Number.isFinite(nextDueTime)) {
+      return;
+    }
+
+    const delay = Math.min(nextDueTime - now + 1, MAX_TIMEOUT_DELAY);
+    const timeoutId = window.setTimeout(() => {
+      setOverdueRefresh((currentRefresh) => currentRefresh + 1);
+    }, delay);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [objectives, overdueRefresh]);
+
+  const filteredObjectives = showOverdueOnly
+    ? objectives.filter((objective) => overdueObjectiveIds.has(objective.id))
+    : objectives;
+
   const objectiveStats = useMemo(() => {
     const activeCount = objectives.filter(
       (objective) =>
@@ -329,8 +391,14 @@ export default function ObjectivesPage() {
         value: String(atRiskCount),
         note: "Needs attention",
       },
+      {
+        label: "Overdue",
+        value: String(overdueCount),
+        note: "Past the due date",
+        filter: "overdue" as const,
+      },
     ];
-  }, [objectives, organization?.name]);
+  }, [objectives, organization?.name, overdueCount]);
 
   function updateCreateForm(field: keyof ObjectiveFormState, value: string) {
     setCreateForm((currentForm) => ({ ...currentForm, [field]: value }));
@@ -637,20 +705,52 @@ export default function ObjectivesPage() {
             </section>
 
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-              {objectiveStats.map((stat) => (
-                <section
-                  key={stat.label}
-                  className="rounded-lg border border-border bg-white p-4 shadow-sm"
-                >
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="mt-3 text-2xl font-semibold">{stat.value}</p>
-                  <p className="mt-2 text-xs text-slate-500">{stat.note}</p>
-                </section>
-              ))}
+              {objectiveStats.map((stat) =>
+                stat.filter === "overdue" ? (
+                  <button
+                    key={stat.label}
+                    aria-pressed={showOverdueOnly}
+                    className={`rounded-lg border bg-white p-4 text-left shadow-sm transition hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-500/30 ${
+                      showOverdueOnly
+                        ? "border-rose-300 ring-1 ring-rose-200"
+                        : "border-border"
+                    }`}
+                    type="button"
+                    onClick={() => setShowOverdueOnly(true)}
+                  >
+                    <p className="text-sm text-rose-700">{stat.label}</p>
+                    <p className="mt-3 text-2xl font-semibold">{stat.value}</p>
+                    <p className="mt-2 text-xs text-slate-500">{stat.note}</p>
+                  </button>
+                ) : (
+                  <section
+                    key={stat.label}
+                    className="rounded-lg border border-border bg-white p-4 shadow-sm"
+                  >
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <p className="mt-3 text-2xl font-semibold">{stat.value}</p>
+                    <p className="mt-2 text-xs text-slate-500">{stat.note}</p>
+                  </section>
+                ),
+              )}
             </div>
           </aside>
 
           <section className="min-w-0 space-y-4">
+            {showOverdueOnly && organization ? (
+              <div className="flex items-center justify-between rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
+                <p className="text-sm font-medium text-rose-700">
+                  Showing overdue objectives
+                </p>
+                <button
+                  className="rounded-md px-3 py-1.5 text-sm font-semibold text-rose-700 hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
+                  type="button"
+                  onClick={() => setShowOverdueOnly(false)}
+                >
+                  Clear filter
+                </button>
+              </div>
+            ) : null}
             {loading || sessionStatus === "loading" ? (
               <div className="rounded-lg border border-border bg-white p-6 text-sm text-muted-foreground shadow-sm">
                 Loading objectives...
@@ -686,8 +786,24 @@ export default function ObjectivesPage() {
                   Add your first objective to start tracking progress.
                 </p>
               </div>
+            ) : filteredObjectives.length === 0 ? (
+              <div className="rounded-lg border border-border bg-white p-6 shadow-sm">
+                <h2 className="text-lg font-semibold tracking-normal">
+                  No overdue objectives
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  None of your open objectives are past their due date.
+                </p>
+                <button
+                  className="mt-4 rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  type="button"
+                  onClick={() => setShowOverdueOnly(false)}
+                >
+                  Clear filter
+                </button>
+              </div>
             ) : (
-              objectives.map((objective) => {
+              filteredObjectives.map((objective) => {
                 const owner =
                   objective.owner?.name ?? objective.owner?.email ?? "Unassigned";
                 const group =
@@ -843,6 +959,11 @@ export default function ObjectivesPage() {
                               >
                                 {statusLabels[objective.status]}
                               </span>
+                              {overdueObjectiveIds.has(objective.id) ? (
+                                <span className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700 ring-1 ring-rose-200">
+                                  Overdue
+                                </span>
+                              ) : null}
                               <span
                                 className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${
                                   visibilityStyles[

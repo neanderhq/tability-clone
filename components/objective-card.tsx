@@ -4,6 +4,7 @@ import {
   type KeyResultUpdateData,
 } from "@/components/keyresult-row";
 import { ProgressBar } from "@/components/progress-bar";
+import { isObjectiveOverdue } from "@/lib/objective-dates";
 
 export type ObjectiveCardData = {
   id: string;
@@ -14,8 +15,16 @@ export type ObjectiveCardData = {
   owner: string;
   team: string;
   status: "Not started" | "On track" | "At risk" | "Off track" | "Completed";
+  lifecycleStatus?:
+    | "NOT_STARTED"
+    | "ON_TRACK"
+    | "AT_RISK"
+    | "OFF_TRACK"
+    | "COMPLETED"
+    | "ARCHIVED";
   progress: number;
   dueDate: string;
+  dueDateValue?: string | null;
   keyResults: KeyResultRowData[];
 };
 
@@ -56,6 +65,11 @@ export function ObjectiveCard({
   onEdit,
   onKeyResultEdit,
 }: ObjectiveCardProps) {
+  const isOverdue = isObjectiveOverdue(
+    objective.dueDateValue,
+    objective.lifecycleStatus ?? objective.status,
+  );
+
   return (
     <article className="rounded-lg border border-border bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -66,8 +80,16 @@ export function ObjectiveCard({
             >
               {objective.status}
             </span>
-            <span className="text-xs text-muted-foreground">
-              Due {objective.dueDate}
+            <span
+              className={
+                isOverdue
+                  ? "rounded-full bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700 ring-1 ring-rose-200"
+                  : "text-xs text-muted-foreground"
+              }
+            >
+              {isOverdue
+                ? `Overdue · ${objective.dueDate}`
+                : `Due ${objective.dueDate}`}
             </span>
           </div>
           <h2 className="mt-3 text-lg font-semibold tracking-normal">

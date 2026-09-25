@@ -10,6 +10,7 @@ import {
 } from "react";
 import { ProgressBar } from "@/components/progress-bar";
 import { Sidebar } from "@/components/sidebar";
+import { isObjectiveOverdue } from "@/lib/objective-dates";
 
 type OrganizationData = {
   id: string;
@@ -697,6 +698,10 @@ export default function ObjectivesPage() {
                   "Workspace";
                 const progress = Math.round(objective.progress ?? 0);
                 const isEditing = editingId === objective.id;
+                const isOverdue = isObjectiveOverdue(
+                  objective.dueDate,
+                  objective.status,
+                );
 
                 return (
                   <article
@@ -856,8 +861,16 @@ export default function ObjectivesPage() {
                                   ]
                                 }
                               </span>
-                              <span className="text-xs text-muted-foreground">
-                                Due {formatDate(objective.dueDate)}
+                              <span
+                                className={
+                                  isOverdue
+                                    ? "rounded-full bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700 ring-1 ring-rose-200"
+                                    : "text-xs text-muted-foreground"
+                                }
+                              >
+                                {isOverdue
+                                  ? `Overdue · ${formatDate(objective.dueDate)}`
+                                  : `Due ${formatDate(objective.dueDate)}`}
                               </span>
                               {objective.updatedAt ? (
                                 <span className="text-xs text-muted-foreground">

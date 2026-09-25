@@ -22,6 +22,7 @@ import type {
   KeyResultRowData,
   KeyResultUpdateData,
 } from "@/components/keyresult-row";
+import { isObjectiveOverdue } from "@/lib/objective-dates";
 
 type OrganizationResponse = {
   organizations?: OrganizationData[];
@@ -434,8 +435,10 @@ function mapObjective(
       organizationName ??
       "Unknown",
     status: calculateObjectiveStatus(keyResults, objective.status),
+    lifecycleStatus: objective.status,
     progress,
     dueDate: formatDueDate(objective.dueDate),
+    dueDateValue: objective.dueDate,
     keyResults,
   };
 }
@@ -450,6 +453,7 @@ export default function DashboardPage() {
   const [objectives, setObjectives] = useState<ObjectiveCardData[]>([]);
   const [metrics, setMetrics] = useState<ApiMetric[]>([]);
   const [objectiveSearch, setObjectiveSearch] = useState("");
+  const [showOverdueOnly, setShowOverdueOnly] = useState(false);
   const [selectedCycleId, setSelectedCycleId] = useState("");
   const [loading, setLoading] = useState(true);
   const [objectivesLoading, setObjectivesLoading] = useState(false);
@@ -697,14 +701,20 @@ export default function DashboardPage() {
   const filteredObjectives = useMemo(() => {
     const normalizedSearch = objectiveSearch.trim().toLowerCase();
 
-    if (!normalizedSearch) {
-      return objectives;
-    }
+    return objectives.filter((objective) => {
+      const matchesSearch =
+        !normalizedSearch ||
+        objective.title.toLowerCase().includes(normalizedSearch);
+      const matchesOverdue =
+        !showOverdueOnly ||
+        isObjectiveOverdue(
+          objective.dueDateValue,
+          objective.lifecycleStatus ?? objective.status,
+        );
 
-    return objectives.filter((objective) =>
-      objective.title.toLowerCase().includes(normalizedSearch),
-    );
-  }, [objectiveSearch, objectives]);
+      return matchesSearch && matchesOverdue;
+    });
+  }, [objectiveSearch, objectives, showOverdueOnly]);
 
   const stats = useMemo(() => {
     const activeObjectives = objectives.filter(
@@ -1195,6 +1205,18 @@ export default function DashboardPage() {
                       }
                     />
                     <button
+                      aria-pressed={showOverdueOnly}
+                      className={`w-fit rounded-md border px-3 py-2 text-sm font-medium transition ${
+                        showOverdueOnly
+                          ? "border-rose-200 bg-rose-50 text-rose-700"
+                          : "border-border hover:bg-muted"
+                      }`}
+                      type="button"
+                      onClick={() => setShowOverdueOnly((current) => !current)}
+                    >
+                      Overdue
+                    </button>
+                    <button
                       className="w-fit rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted"
                       type="button"
                       onClick={openCreateObjective}
@@ -1226,7 +1248,9 @@ export default function DashboardPage() {
                     ))
                   ) : (
                     <div className="rounded-lg border border-border bg-white p-5 text-sm text-muted-foreground shadow-sm">
-                      {objectiveSearch.trim()
+                      {showOverdueOnly
+                        ? "No overdue objectives match the current filters."
+                        : objectiveSearch.trim()
                         ? "No objectives match this search."
                         : "No objectives found for this cycle."}
                     </div>

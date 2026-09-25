@@ -39,7 +39,7 @@ export default async function SignInPage() {
             Sign in to your workspace
           </h1>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            Use an email address to start a local session for the OKR dashboard.
+            Enter your email to continue to your OKR dashboard.
           </p>
         </div>
 

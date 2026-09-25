@@ -36,10 +36,10 @@ export default async function SignInPage() {
         <div className="mb-8">
           <p className="text-sm font-medium text-primary">Tability Clone</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-normal">
-            Sign in to your workspace
+            Sign in to your OKR workspace
           </h1>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            Enter your email to continue to your OKR dashboard.
+            Enter your email to open your OKR dashboard.
           </p>
         </div>
 

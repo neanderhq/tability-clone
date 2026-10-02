@@ -1,6 +1,6 @@
 # Tability Clone
 
-An open-source OKR management platform inspired by [Tability](https://tability.io).
+An open-source OKR management platform, inspired by [Tability](https://tability.io).
 
 ## What this is
 

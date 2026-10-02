@@ -4,7 +4,7 @@ An open-source OKR management platform inspired by [Tability](https://tability.i
 
 ## What this is
 
-A self-hosted OKR (Objectives & Key Results) tool built for teams that want to track goals, key results, and check-ins without the subscription cost.
+A self-hosted OKR (Objectives & Key Results) tool built for teams that want to track goals, key results, and check-ins — without the subscription cost.
 
 ## Features (planned)
 
